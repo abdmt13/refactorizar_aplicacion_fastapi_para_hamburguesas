@@ -3,8 +3,8 @@
 set -e
 set -x
 
-# Run migrations
-alembic upgrade head
+# Run migrations (Comentado para evitar sobreescritura accidental; base de datos gestionada manualmente)
+# alembic upgrade head
 
 # Create initial data in DB
 python app/initial_data.py

@@ -1,25 +1,29 @@
+from collections.abc import Generator
+from typing import Annotated
+
+from fastapi import Depends
 from sqlmodel import Session, create_engine, select
 
-from app import crud
 from app.core.config import settings
-from app.models import User, UserCreate
 
 engine = create_engine(str(settings.DATABASE_URL), pool_pre_ping=True)
 
 
-# make sure all SQLModel models are imported (app.models) before initializing DB
-# otherwise, SQLModel might fail to initialize relationships properly
-# for more details: https://github.com/fastapi/full-stack-fastapi-template/issues/28
+def get_db() -> Generator[Session]:
+    with Session(engine) as session:
+        yield session
+
+
+SessionDep = Annotated[Session, Depends(get_db)]
 
 
 def init_db(session: Session) -> None:
-    # Tables should be created with Alembic migrations
-    # But if you don't want to use migrations, create
-    # the tables un-commenting the next lines
+    # Tables can be created manually (e.g. in HeidiSQL) or with SQLModel.metadata.create_all(engine)
     # from sqlmodel import SQLModel
-
-    # This works because the models are already imported and registered from app.models
     # SQLModel.metadata.create_all(engine)
+
+    from app.users import service as user_service
+    from app.users.models import User, UserCreate
 
     user = session.exec(
         select(User).where(User.email == settings.FIRST_SUPERUSER)
@@ -30,4 +34,5 @@ def init_db(session: Session) -> None:
             password=settings.FIRST_SUPERUSER_PASSWORD,
             is_superuser=True,
         )
-        user = crud.create_user(session=session, user_create=user_in)
+        user = user_service.create_user(session=session, user_create=user_in)
+
